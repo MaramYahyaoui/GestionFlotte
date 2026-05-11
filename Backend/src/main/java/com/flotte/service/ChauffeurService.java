@@ -8,13 +8,12 @@ import com.flotte.repository.TrajetMissionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
-@Transactional(readOnly = true)
 public class ChauffeurService {
 
     @Autowired
@@ -24,17 +23,19 @@ public class ChauffeurService {
     private TrajetMissionRepository trajetRepository;
 
     @Autowired
-    private ChauffeurConverter chauffeurConverter;  // injection du mapper (slide 25)
+    private ChauffeurConverter chauffeurConverter;
 
     public List<ChauffeurDTO> findAll() {
         return chauffeurConverter.toDtoList(chauffeurRepository.findAll());
     }
 
-    public ChauffeurDTO findById(Long id) {
-        Chauffeur chauffeur = chauffeurRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Chauffeur avec l'id " + id + " introuvable"));
-        return chauffeurConverter.toDto(chauffeur);
+    public Optional<ChauffeurDTO> findById(Long id) {
+        return chauffeurRepository.findById(id)
+                .map(chauffeurConverter::toDto);
+    }
+
+    public List<ChauffeurDTO> findByNom(String nom) {
+        return chauffeurConverter.toDtoList(chauffeurRepository.findByNomContainingIgnoreCase(nom));
     }
 
     public List<ChauffeurDTO> findDisponibles() {
@@ -45,12 +46,7 @@ public class ChauffeurService {
         return chauffeurConverter.toDtoList(chauffeurRepository.findChauffeursLesPlasActifs());
     }
 
-    public List<ChauffeurDTO> findByNom(String nom) {
-        return chauffeurConverter.toDtoList(chauffeurRepository.findByNomContainingIgnoreCase(nom));
-    }
-
-    @Transactional
-    public ChauffeurDTO create(ChauffeurDTO dto) {
+    public ChauffeurDTO save(ChauffeurDTO dto) {
         if (chauffeurRepository.existsByPermis(dto.getPermis())) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
@@ -59,35 +55,33 @@ public class ChauffeurService {
         return chauffeurConverter.toDto(chauffeurRepository.save(chauffeurConverter.fromDto(dto)));
     }
 
-    @Transactional
     public ChauffeurDTO update(Long id, ChauffeurDTO dto) {
-        Chauffeur chauffeur = chauffeurRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Chauffeur avec l'id " + id + " introuvable"));
-
-        if (!chauffeur.getPermis().equals(dto.getPermis())
-                && chauffeurRepository.existsByPermis(dto.getPermis())) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Le numéro de permis " + dto.getPermis() + " est déjà utilisé");
-        }
-        chauffeur.setNom(dto.getNom());
-        chauffeur.setPermis(dto.getPermis());
-        chauffeur.setExperience(dto.getExperience());
-        return chauffeurConverter.toDto(chauffeurRepository.save(chauffeur));
+        final ChauffeurDTO[] result = {null};
+        chauffeurRepository.findById(id).ifPresentOrElse(
+                chauffeur -> {
+                    chauffeur.setNom(dto.getNom());
+                    chauffeur.setPermis(dto.getPermis());
+                    chauffeur.setExperience(dto.getExperience());
+                    result[0] = chauffeurConverter.toDto(chauffeurRepository.save(chauffeur));
+                },
+                () -> { throw new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Chauffeur avec l'id " + id + " introuvable"); }
+        );
+        return result[0];
     }
 
-    @Transactional
     public void delete(Long id) {
-        if (!chauffeurRepository.existsById(id)) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, "Chauffeur avec l'id " + id + " introuvable");
-        }
-        if (trajetRepository.chauffeurAMissionEnCours(id)) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Impossible de supprimer un chauffeur ayant une mission en cours");
-        }
-        chauffeurRepository.deleteById(id);
+        chauffeurRepository.findById(id).ifPresentOrElse(
+                chauffeur -> {
+                    if (trajetRepository.chauffeurAMissionEnCours(id)) {
+                        throw new ResponseStatusException(
+                                HttpStatus.CONFLICT,
+                                "Impossible de supprimer un chauffeur ayant une mission en cours");
+                    }
+                    chauffeurRepository.deleteById(id);
+                },
+                () -> { throw new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Chauffeur avec l'id " + id + " introuvable"); }
+        );
     }
 }

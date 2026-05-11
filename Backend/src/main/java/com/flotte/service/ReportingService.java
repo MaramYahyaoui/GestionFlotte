@@ -1,21 +1,25 @@
 package com.flotte.service;
 
-import com.flotte.dto.DashboardDTO;
-import com.flotte.dto.VehiculeActifDTO;
+import com.flotte.dto.AlertMaintenanceDTO;
+import com.flotte.dto.VehiculeDTO;
 import com.flotte.repository.ChauffeurRepository;
 import com.flotte.repository.ConsommationRepository;
 import com.flotte.repository.TrajetMissionRepository;
 import com.flotte.repository.VehiculeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.time.LocalDate;
+import java.time.Month;
+import java.time.format.TextStyle;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-@Transactional(readOnly = true)
 public class ReportingService {
 
     @Autowired
@@ -33,94 +37,76 @@ public class ReportingService {
     @Autowired
     private VehiculeService vehiculeService;
 
-    @Value("${fleet.maintenance.seuil-kilometrage:10000}")
-    private Integer seuilMaintenance;
-
-    public DashboardDTO getDashboardGlobal() {
-        long totalVehicules    = vehiculeRepository.count();
-        long disponibles       = vehiculeRepository.findByStatut("DISPONIBLE").size();
-        long enMission         = vehiculeRepository.findByStatut("EN_MISSION").size();
-        long enMaintenance     = vehiculeRepository.findByStatut("EN_MAINTENANCE").size();
-        long totalChauffeurs   = chauffeurRepository.count();
-        long missionsEnCours   = trajetRepository.findByStatut("EN_COURS").size();
-        long totalMissions     = trajetRepository.count();
-        Double coutTotal       = consommationRepository.sumCoutTotal();
-
-        List<Object[]> distancesData = trajetRepository.sumDistanceParVehicule();
-        double distanceTotale = distancesData.stream()
-                .mapToDouble(row -> row[1] != null ? ((Number) row[1]).doubleValue() : 0)
+    // Dashboard global
+    public Map<String, Object> getDashboard() {
+        Map<String, Object> dashboard = new HashMap<>();
+        dashboard.put("totalVehicules",         vehiculeRepository.count());
+        dashboard.put("totalChauffeurs",        chauffeurRepository.count());
+        dashboard.put("totalMissions",          trajetRepository.count());
+        dashboard.put("missionsEnCours",        trajetRepository.findByStatut("EN_COURS").size());
+        dashboard.put("vehiculesDisponibles",   vehiculeRepository.findByStatut("DISPONIBLE").size());
+        dashboard.put("vehiculesEnMission",     vehiculeRepository.findByStatut("EN_MISSION").size());
+        dashboard.put("vehiculesEnMaintenance", vehiculeRepository.findByStatut("EN_MAINTENANCE").size());
+        Double coutTotal = consommationRepository.sumCoutTotal();
+        dashboard.put("coutCarburantTotal", coutTotal != null ? coutTotal : 0.0);
+        // distance totale
+        double distanceTotale = trajetRepository.sumDistanceParVehicule().stream()
+                .mapToDouble(r -> r[1] != null ? ((Number) r[1]).doubleValue() : 0)
                 .sum();
-
-        return DashboardDTO.builder()
-                .totalVehicules(totalVehicules)
-                .vehiculesDisponibles(disponibles)
-                .vehiculesEnMission(enMission)
-                .vehiculesEnMaintenance(enMaintenance)
-                .totalChauffeurs(totalChauffeurs)
-                .missionsEnCours(missionsEnCours)
-                .totalMissions(totalMissions)
-                .coutCarburantTotal(coutTotal != null ? coutTotal : 0.0)
-                .distanceTotale(distanceTotale)
-                .alertesMaintenance(vehiculeService.getAlertesMaintenance())
-                .build();
+        dashboard.put("distanceTotale", distanceTotale);
+        // alertes maintenance
+        dashboard.put("alertesMaintenance", vehiculeService.getAlertesMaintenance(10000));
+        return dashboard;
     }
 
-    public List<VehiculeActifDTO> getFLotteActive() {
-        Map<Long, Long> missionsParVehicule = new HashMap<>();
-        trajetRepository.countMissionsParVehicule()
-                .forEach(row -> missionsParVehicule.put((Long) row[0], (Long) row[1]));
-
-        Map<Long, Double> distanceParVehicule = new HashMap<>();
-        trajetRepository.sumDistanceParVehicule()
-                .forEach(row -> distanceParVehicule.put(
-                        (Long) row[0],
-                        row[1] != null ? ((Number) row[1]).doubleValue() : 0.0));
-
-        Map<Long, Double> coutParVehicule = new HashMap<>();
-        consommationRepository.sumCoutParVehicule()
-                .forEach(row -> coutParVehicule.put(
-                        (Long) row[0],
-                        row[1] != null ? ((Number) row[1]).doubleValue() : 0.0));
-
-        return vehiculeRepository.findAll().stream()
-                .map(v -> VehiculeActifDTO.builder()
-                        .vehiculeId(v.getId())
-                        .immatriculation(v.getImmatriculation())
-                        .modele(v.getModele())
-                        .type(v.getType())
-                        .kilometrage(v.getKilometrage())
-                        .nombreMissions(missionsParVehicule.getOrDefault(v.getId(), 0L))
-                        .distanceTotale(distanceParVehicule.getOrDefault(v.getId(), 0.0))
-                        .coutCarburant(coutParVehicule.getOrDefault(v.getId(), 0.0))
-                        .build())
-                .sorted(Comparator.comparingLong(VehiculeActifDTO::getNombreMissions).reversed())
+    // Top 5 véhicules les plus actifs
+    public List<VehiculeDTO> getTop5VehiculesActifs() {
+        return vehiculeService.getVehiculesLesPlasActifs()
+                .stream().limit(5)
                 .collect(Collectors.toList());
     }
 
-    public List<VehiculeActifDTO> getTop5VehiculesActifs() {
-        return getFLotteActive().stream().limit(5).collect(Collectors.toList());
+    // Flotte active — tous les véhicules avec stats
+    public List<Map<String, Object>> getFLotteActive() {
+        return vehiculeRepository.findAll().stream().map(v -> {
+            Map<String, Object> item = new HashMap<>();
+            item.put("vehiculeId",     v.getId());
+            item.put("immatriculation",v.getImmatriculation());
+            item.put("modele",         v.getModele());
+            item.put("type",           v.getType());
+            item.put("kilometrage",    v.getKilometrage());
+            item.put("statut",         v.getStatut());
+            long nbMissions = v.getTrajets() != null ? v.getTrajets().size() : 0;
+            double distance = v.getTrajets() != null ? v.getTrajets().stream()
+                    .mapToDouble(t -> t.getDistance() != null ? t.getDistance() : 0).sum() : 0;
+            double coutCarb = v.getConsommations() != null ? v.getConsommations().stream()
+                    .mapToDouble(c -> c.getCoutTotal() != null ? c.getCoutTotal() : 0).sum() : 0;
+            item.put("nombreMissions", nbMissions);
+            item.put("distanceTotale", distance);
+            item.put("coutCarburant",  coutCarb);
+            return item;
+        }).collect(Collectors.toList());
     }
 
-    public Map<String, Long> getStatutRepartition() {
-        Map<String, Long> repartition = new LinkedHashMap<>();
-        repartition.put("DISPONIBLE",    (long) vehiculeRepository.findByStatut("DISPONIBLE").size());
-        repartition.put("EN_MISSION",    (long) vehiculeRepository.findByStatut("EN_MISSION").size());
-        repartition.put("EN_MAINTENANCE",(long) vehiculeRepository.findByStatut("EN_MAINTENANCE").size());
-        repartition.put("EN_PANNE",      (long) vehiculeRepository.findByStatut("EN_PANNE").size());
-        return repartition;
+    // Répartition des véhicules par statut
+    public Map<String, Long> getStatuts() {
+        Map<String, Long> statuts = new LinkedHashMap<>();
+        statuts.put("DISPONIBLE",     (long) vehiculeRepository.findByStatut("DISPONIBLE").size());
+        statuts.put("EN_MISSION",     (long) vehiculeRepository.findByStatut("EN_MISSION").size());
+        statuts.put("EN_MAINTENANCE", (long) vehiculeRepository.findByStatut("EN_MAINTENANCE").size());
+        statuts.put("EN_PANNE",       (long) vehiculeRepository.findByStatut("EN_PANNE").size());
+        return statuts;
     }
 
+    // Missions par mois pour une année
     public Map<String, Long> getMissionsParMois(int annee) {
         Map<String, Long> result = new LinkedHashMap<>();
-        String[] mois = {"Janvier","Février","Mars","Avril","Mai","Juin",
-                          "Juillet","Août","Septembre","Octobre","Novembre","Décembre"};
         for (int m = 1; m <= 12; m++) {
-            long count = trajetRepository.findByDateMissionBetween(
-                    java.time.LocalDate.of(annee, m, 1),
-                    java.time.LocalDate.of(annee, m, 1).withDayOfMonth(
-                            java.time.LocalDate.of(annee, m, 1).lengthOfMonth())
-            ).size();
-            result.put(mois[m - 1], count);
+            LocalDate debut = LocalDate.of(annee, m, 1);
+            LocalDate fin   = debut.withDayOfMonth(debut.lengthOfMonth());
+            long count = trajetRepository.findByDateMissionBetween(debut, fin).size();
+            String moisLibelle = Month.of(m).getDisplayName(TextStyle.FULL, Locale.FRENCH);
+            result.put(moisLibelle, count);
         }
         return result;
     }

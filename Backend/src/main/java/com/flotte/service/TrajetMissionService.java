@@ -1,5 +1,6 @@
 package com.flotte.service;
 
+import com.flotte.converter.TrajetMissionConverter;
 import com.flotte.dto.TrajetMissionDTO;
 import com.flotte.entity.Chauffeur;
 import com.flotte.entity.TrajetMission;
@@ -10,15 +11,13 @@ import com.flotte.repository.VehiculeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 @Service
-@Transactional(readOnly = true)
 public class TrajetMissionService {
 
     @Autowired
@@ -30,59 +29,26 @@ public class TrajetMissionService {
     @Autowired
     private ChauffeurRepository chauffeurRepository;
 
+    @Autowired
+    private TrajetMissionConverter trajetConverter;
+
+    // Retourner toutes les missions
     public List<TrajetMissionDTO> findAll() {
-        return trajetRepository.findAll().stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
+        return trajetConverter.toDtoList(trajetRepository.findAll());
     }
 
-    public TrajetMissionDTO findById(Long id) {
-        return trajetRepository.findById(id)
-                .map(this::toDTO)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Mission avec l'id " + id + " introuvable"));
+    // Retourner une mission par id — Optional comme dans le cours
+    public Optional<TrajetMissionDTO> findById(Long id) {
+        return trajetRepository.findById(id).map(trajetConverter::toDto);
     }
 
-    public List<TrajetMissionDTO> findByVehicule(Long vehiculeId) {
-        if (!vehiculeRepository.existsById(vehiculeId)) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, "Véhicule avec l'id " + vehiculeId + " introuvable");
-        }
-        return trajetRepository.findByVehiculeId(vehiculeId).stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
-    }
-
-    public List<TrajetMissionDTO> findByChauffeur(Long chauffeurId) {
-        if (!chauffeurRepository.existsById(chauffeurId)) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND, "Chauffeur avec l'id " + chauffeurId + " introuvable");
-        }
-        return trajetRepository.findByChauffeurId(chauffeurId).stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
-    }
-
+    // Retourner les missions par statut
     public List<TrajetMissionDTO> findByStatut(String statut) {
-        return trajetRepository.findByStatut(statut).stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
+        return trajetConverter.toDtoList(trajetRepository.findByStatut(statut));
     }
 
-    public List<TrajetMissionDTO> findEnCours() {
-        return trajetRepository.findByStatut("EN_COURS").stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
-    }
-
-    public List<TrajetMissionDTO> findByPeriode(LocalDate debut, LocalDate fin) {
-        return trajetRepository.findByDateMissionBetween(debut, fin).stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional
-    public TrajetMissionDTO create(TrajetMissionDTO dto) {
+    // Créer une mission
+    public TrajetMissionDTO save(TrajetMissionDTO dto) {
         Vehicule vehicule = vehiculeRepository.findById(dto.getVehiculeId())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Véhicule avec l'id " + dto.getVehiculeId() + " introuvable"));
@@ -93,21 +59,12 @@ public class TrajetMissionService {
 
         if (trajetRepository.vehiculeEnMission(dto.getVehiculeId())) {
             throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Le véhicule " + vehicule.getImmatriculation() + " est déjà en mission");
+                    HttpStatus.CONFLICT, "Le véhicule " + vehicule.getImmatriculation() + " est déjà en mission");
         }
 
         if (trajetRepository.chauffeurAMissionEnCours(dto.getChauffeurId())) {
             throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Le chauffeur " + chauffeur.getNom() + " a déjà une mission en cours");
-        }
-
-        if ("EN_PANNE".equals(vehicule.getStatut()) || "EN_MAINTENANCE".equals(vehicule.getStatut())) {
-            throw new ResponseStatusException(
-                    HttpStatus.UNPROCESSABLE_ENTITY,
-                    "Le véhicule " + vehicule.getImmatriculation()
-                            + " n'est pas disponible (statut: " + vehicule.getStatut() + ")");
+                    HttpStatus.CONFLICT, "Le chauffeur " + chauffeur.getNom() + " a déjà une mission en cours");
         }
 
         TrajetMission mission = TrajetMission.builder()
@@ -123,102 +80,50 @@ public class TrajetMissionService {
         vehicule.setStatut("EN_MISSION");
         vehiculeRepository.save(vehicule);
 
-        return toDTO(trajetRepository.save(mission));
+        return trajetConverter.toDto(trajetRepository.save(mission));
     }
 
-    @Transactional
+    // Mettre à jour une mission — ifPresentOrElse
     public TrajetMissionDTO update(Long id, TrajetMissionDTO dto) {
-        TrajetMission mission = trajetRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Mission avec l'id " + id + " introuvable"));
-
-        if ("TERMINEE".equals(mission.getStatut())) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT, "Impossible de modifier une mission terminée");
-        }
-
-        mission.setPointDepart(dto.getPointDepart());
-        mission.setDestination(dto.getDestination());
-        mission.setDistance(dto.getDistance());
-        if (dto.getDateMission() != null) mission.setDateMission(dto.getDateMission());
-
-        return toDTO(trajetRepository.save(mission));
+        final TrajetMissionDTO[] result = {null};
+        trajetRepository.findById(id).ifPresentOrElse(
+                mission -> {
+                    mission.setPointDepart(dto.getPointDepart());
+                    mission.setDestination(dto.getDestination());
+                    mission.setDistance(dto.getDistance());
+                    if (dto.getDateMission() != null) mission.setDateMission(dto.getDateMission());
+                    result[0] = trajetConverter.toDto(trajetRepository.save(mission));
+                },
+                () -> { throw new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Mission avec l'id " + id + " introuvable"); }
+        );
+        return result[0];
     }
 
-    @Transactional
-    public TrajetMissionDTO terminerMission(Long id, Double distanceFinale) {
-        TrajetMission mission = trajetRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Mission avec l'id " + id + " introuvable"));
-
-        if (!"EN_COURS".equals(mission.getStatut())) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT, "Seules les missions en cours peuvent être terminées");
-        }
-
-        if (distanceFinale != null && distanceFinale > 0) {
-            mission.setDistance(distanceFinale);
-        }
-        mission.setStatut("TERMINEE");
-
-        Vehicule vehicule = mission.getVehicule();
-        vehicule.setKilometrage(vehicule.getKilometrage() + mission.getDistance().intValue());
-        vehicule.setStatut("DISPONIBLE");
-        vehiculeRepository.save(vehicule);
-
-        return toDTO(trajetRepository.save(mission));
+    // Terminer une mission — ifPresentOrElse
+    public TrajetMissionDTO terminerMission(Long id) {
+        final TrajetMissionDTO[] result = {null};
+        trajetRepository.findById(id).ifPresentOrElse(
+                mission -> {
+                    mission.setStatut("TERMINEE");
+                    Vehicule vehicule = mission.getVehicule();
+                    vehicule.setKilometrage(vehicule.getKilometrage() + mission.getDistance().intValue());
+                    vehicule.setStatut("DISPONIBLE");
+                    vehiculeRepository.save(vehicule);
+                    result[0] = trajetConverter.toDto(trajetRepository.save(mission));
+                },
+                () -> { throw new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Mission avec l'id " + id + " introuvable"); }
+        );
+        return result[0];
     }
 
-    @Transactional
-    public TrajetMissionDTO annulerMission(Long id) {
-        TrajetMission mission = trajetRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Mission avec l'id " + id + " introuvable"));
-
-        if ("TERMINEE".equals(mission.getStatut())) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT, "Impossible d'annuler une mission terminée");
-        }
-
-        String ancienStatut = mission.getStatut();
-        mission.setStatut("ANNULEE");
-
-        if ("EN_COURS".equals(ancienStatut)) {
-            Vehicule vehicule = mission.getVehicule();
-            vehicule.setStatut("DISPONIBLE");
-            vehiculeRepository.save(vehicule);
-        }
-
-        return toDTO(trajetRepository.save(mission));
-    }
-
-    @Transactional
+    // Supprimer une mission — ifPresentOrElse
     public void delete(Long id) {
-        TrajetMission mission = trajetRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Mission avec l'id " + id + " introuvable"));
-
-        if ("EN_COURS".equals(mission.getStatut())) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT, "Impossible de supprimer une mission en cours");
-        }
-        trajetRepository.deleteById(id);
-    }
-
-    // ========== Mapper ==========
-
-    public TrajetMissionDTO toDTO(TrajetMission t) {
-        return TrajetMissionDTO.builder()
-                .id(t.getId())
-                .vehiculeId(t.getVehicule().getId())
-                .vehiculeImmatriculation(t.getVehicule().getImmatriculation())
-                .chauffeurId(t.getChauffeur().getId())
-                .chauffeurNom(t.getChauffeur().getNom())
-                .pointDepart(t.getPointDepart())
-                .destination(t.getDestination())
-                .distance(t.getDistance())
-                .dateMission(t.getDateMission())
-                .statut(t.getStatut())
-                .build();
+        trajetRepository.findById(id).ifPresentOrElse(
+                mission -> trajetRepository.deleteById(id),
+                () -> { throw new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Mission avec l'id " + id + " introuvable"); }
+        );
     }
 }
