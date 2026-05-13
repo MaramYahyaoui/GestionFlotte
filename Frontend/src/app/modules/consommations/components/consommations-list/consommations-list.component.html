@@ -1,0 +1,72 @@
+<div class="fade-in">
+  <div class="page-header">
+    <div class="page-title">
+      <h1>Consommations</h1>
+      <p>{{ filtered.length }} enregistrement(s)</p>
+    </div>
+    <button class="btn btn--primary" routerLink="/consommations/nouvelle">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Enregistrer un plein
+    </button>
+  </div>
+
+  <!-- Summary row -->
+  <div class="summary-row" *ngIf="filtered.length > 0">
+    <div class="summary-item">
+      <span class="summary-val mono">{{ totalLitres | number:'1.0-1' }} L</span>
+      <span class="summary-lbl">Total carburant</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-val mono">{{ totalCout | number:'1.0-2' }} TND</span>
+      <span class="summary-lbl">Coût total</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-val mono">{{ (totalCout / totalLitres) | number:'1.0-2' }} TND/L</span>
+      <span class="summary-lbl">Prix moyen au litre</span>
+    </div>
+  </div>
+
+  <div class="filter-row">
+    <div class="search-bar">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Immatriculation…" [(ngModel)]="search" (ngModelChange)="applyFilters()">
+    </div>
+    <button class="btn btn--secondary btn--sm" (click)="load()">Actualiser</button>
+  </div>
+
+  <app-loading-spinner *ngIf="loading"></app-loading-spinner>
+
+  <div class="card" *ngIf="!loading">
+    <div class="table-wrapper" style="border:none">
+      <table>
+        <thead>
+          <tr>
+            <th>Véhicule</th><th>Date</th><th>Quantité (L)</th><th>Coût (TND)</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of filtered">
+            <td class="mono">{{ c.vehiculeImmatriculation }}</td>
+            <td class="mono">{{ c.date | date:'dd/MM/yyyy' }}</td>
+            <td class="mono">{{ c.quantiteCarburant | number:'1.0-1' }}</td>
+            <td class="mono">{{ c.coutTotal | number:'1.0-2' }}</td>
+            <td>
+              <div class="action-cell">
+                <button class="btn btn--icon" [routerLink]="['/consommations', c.id, 'modifier']" title="Modifier">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="btn btn--icon" (click)="delete(c)" title="Supprimer">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="filtered.length===0">
+            <td colspan="5"><div class="empty-state"><p>Aucune consommation enregistrée</p></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<app-confirm-dialog></app-confirm-dialog>

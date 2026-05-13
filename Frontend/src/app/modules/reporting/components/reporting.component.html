@@ -1,0 +1,141 @@
+<div class="fade-in">
+  <div class="page-header">
+    <div class="page-title">
+      <h1>Reporting</h1>
+      <p>Analyse de l'utilisation de la flotte</p>
+    </div>
+    <button class="btn btn--secondary btn--sm" (click)="load()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+      Actualiser
+    </button>
+  </div>
+
+  <app-loading-spinner *ngIf="loading"></app-loading-spinner>
+
+  <ng-container *ngIf="!loading">
+
+    <div class="reporting-grid">
+      <div class="card">
+        <div class="card__header">
+          <span class="card__title">Répartition par statut</span>
+        </div>
+        <div class="statut-chart">
+          <div class="statut-row" *ngFor="let entry of statuts | keyvalue">
+            <span class="statut-label">
+              <app-status-badge [status]="$any(entry.key)"></app-status-badge>
+            </span>
+            <div class="statut-bar-wrap">
+              <div class="statut-bar" [style.width.%]="pct($any(entry.value))"
+                   [class]="'statut-bar--' + $any(entry.key).toLowerCase().replace('_','-')">
+              </div>
+            </div>
+            <span class="statut-count mono">{{ entry.value }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card__header">
+          <span class="card__title">Missions par mois</span>
+          <div style="display:flex;gap:6px">
+            <button *ngFor="let a of annees"
+                    class="btn btn--secondary btn--sm"
+                    [class.active-year]="a === currentAnnee"
+                    (click)="changeAnnee(a)">{{ a }}</button>
+          </div>
+        </div>
+        <div class="bar-chart">
+          <div class="bar-col" *ngFor="let entry of missionsEntries">
+            <div class="bar-wrap">
+              <span class="bar-value mono" *ngIf="entry[1] > 0">{{ entry[1] }}</span>
+              <div class="bar" [style.height.%]="getBarHeight(entry[1])"></div>
+            </div>
+            <span class="bar-label">{{ entry[0].substring(0, 3) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px">
+      <div class="card__header">
+        <span class="card__title">Coûts carburant par véhicule</span>
+      </div>
+      <div class="table-wrapper" style="border:none">
+        <table>
+          <thead>
+            <tr>
+              <th>Véhicule</th>
+              <th>Modèle</th>
+              <th>Nombre de pleins</th>
+              <th>Total litres</th>
+              <th>Coût total</th>
+              <th>% budget</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of couts">
+              <td class="mono">{{ c.immatriculation }}</td>
+              <td>{{ c.modele }}</td>
+              <td class="mono">{{ c.nombrePleins }}</td>
+              <td class="mono">{{ c.quantiteTotale | number:'1.0-1' }} L</td>
+              <td class="mono">{{ formatCurrency(c.coutTotal) }}</td>
+              <td>
+                <div class="pct-bar">
+                  <div class="pct-fill" [style.width.%]="couts.length > 0 ? (c.coutTotal / couts[0].coutTotal) * 100 : 0"></div>
+                  <span class="mono">{{ getPercentage(c.coutTotal) | number:'1.0-0' }}%</span>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="couts.length === 0">
+              <td colspan="6"><div class="empty-state"><p>Aucune donnée de consommation</p></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__header">
+        <span class="card__title">Classement flotte — utilisation</span>
+      </div>
+      <div class="table-wrapper" style="border:none">
+        <table>
+          <thead>
+            <tr>
+              <th>Rang</th>
+              <th>Immatriculation</th>
+              <th>Modèle</th>
+              <th>Type</th>
+              <th>Missions</th>
+              <th>Distance</th>
+              <th>Coût carburant</th>
+              <th>Kilométrage</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let v of flotteActive; let i = index">
+              <td>
+                <span class="rank-badge" [class.rank-gold]="i===0" [class.rank-silver]="i===1" [class.rank-bronze]="i===2">
+                  #{{ i + 1 }}
+                </span>
+              </td>
+              <td class="mono">{{ v.immatriculation }}</td>
+              <td>{{ v.modele }}</td>
+              <td><span class="chip">{{ v.type }}</span></td>
+              <td class="mono">{{ v.nombreMissions }}</td>
+              <td class="mono">{{ v.distanceTotale | number:'1.0-0' }} km</td>
+              <td class="mono">{{ formatCurrency(v.coutCarburant) }}</td>
+              <td class="mono">{{ v.kilometrage | number }} km</td>
+            </tr>
+            <tr *ngIf="flotteActive.length === 0">
+              <td colspan="8"><div class="empty-state"><p>Aucune donnée disponible</p></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </ng-container>
+</div>

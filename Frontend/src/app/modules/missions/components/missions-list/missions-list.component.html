@@ -1,0 +1,88 @@
+<div class="fade-in">
+  <div class="page-header">
+    <div class="page-title">
+      <h1>Missions</h1>
+      <p>{{ filtered.length }} mission(s)</p>
+    </div>
+    <button class="btn btn--primary" routerLink="/missions/nouvelle">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nouvelle mission
+    </button>
+  </div>
+
+  <div class="filter-row">
+    <div class="search-bar">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Véhicule, chauffeur, trajet…"
+             [(ngModel)]="search" (ngModelChange)="applyFilters()">
+    </div>
+    <select class="form-control" style="width:170px"
+            [(ngModel)]="selectedStatut" (ngModelChange)="applyFilters()">
+      <option value="">Tous statuts</option>
+      <option value="EN_COURS">En cours</option>
+      <option value="TERMINEE">Terminée</option>
+      <option value="ANNULEE">Annulée</option>
+    </select>
+    <button class="btn btn--secondary btn--sm" (click)="load()">Actualiser</button>
+  </div>
+
+  <app-loading-spinner *ngIf="loading"></app-loading-spinner>
+
+  <div class="card" *ngIf="!loading">
+    <div class="table-wrapper" style="border:none">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Véhicule</th>
+            <th>Chauffeur</th>
+            <th>Trajet</th>
+            <th>Distance</th>
+            <th>Date</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let m of filtered">
+            <td class="mono" style="color:var(--text-muted)">#{{ m.id }}</td>
+            <td class="mono">{{ m.vehiculeImmatriculation }}</td>
+            <td>{{ m.chauffeurNom }}</td>
+            <td>
+              <div class="trajet-cell">
+                <span>{{ m.pointDepart }}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                <span>{{ m.destination }}</span>
+              </div>
+            </td>
+            <td class="mono">{{ m.distance | number:'1.0-1' }} km</td>
+            <td class="mono">{{ m.dateMission | date:'dd/MM/yy' }}</td>
+            <td><app-status-badge [status]="m.statut!"></app-status-badge></td>
+            <td>
+              <div class="action-cell">
+                <button *ngIf="m.statut==='EN_COURS'" class="btn btn--success btn--sm" (click)="terminer(m)" title="Terminer">✓</button>
+                <button *ngIf="m.statut==='EN_COURS'" class="btn btn--danger btn--sm" (click)="annuler(m)" title="Annuler">✕</button>
+                <button class="btn btn--icon" [routerLink]="['/missions', m.id, 'modifier']"
+                        *ngIf="m.statut!=='TERMINEE'" title="Modifier">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="btn btn--icon" (click)="delete(m)" *ngIf="m.statut!=='EN_COURS'" title="Supprimer">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="filtered.length===0">
+            <td colspan="8">
+              <div class="empty-state">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/></svg>
+                <p>Aucune mission trouvée</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<app-confirm-dialog></app-confirm-dialog>

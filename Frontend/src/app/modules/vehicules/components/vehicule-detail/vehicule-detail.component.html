@@ -1,0 +1,127 @@
+<div class="fade-in">
+  <div class="page-header">
+    <div class="page-title">
+      <h1 class="mono" *ngIf="vehicule">{{ vehicule.immatriculation }}</h1>
+      <p *ngIf="vehicule">{{ vehicule.modele }} — {{ vehicule.type }}</p>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn--secondary" routerLink="/vehicules">← Retour</button>
+      <button class="btn btn--primary" *ngIf="vehicule" [routerLink]="['/vehicules', vehicule.id, 'modifier']">
+        Modifier
+      </button>
+    </div>
+  </div>
+
+  <app-loading-spinner *ngIf="loading"></app-loading-spinner>
+
+  <ng-container *ngIf="!loading && vehicule">
+    <div class="detail-grid">
+      <!-- Info card -->
+      <div class="card">
+        <div class="card__header"><span class="card__title">Informations</span></div>
+        <div class="info-list">
+          <div class="info-row">
+            <span class="info-label">Immatriculation</span>
+            <span class="info-value mono">{{ vehicule.immatriculation }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Modèle</span>
+            <span class="info-value">{{ vehicule.modele }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Type</span>
+            <span class="info-value">{{ vehicule.type }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Kilométrage</span>
+            <span class="info-value mono">{{ vehicule.kilometrage | number }} km</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Statut</span>
+            <app-status-badge [status]="vehicule.statut"></app-status-badge>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats card -->
+      <div class="mini-stats">
+        <div class="mini-stat">
+          <span class="mini-stat__val mono">{{ missions.length }}</span>
+          <span class="mini-stat__lbl">Total missions</span>
+        </div>
+        <div class="mini-stat">
+          <span class="mini-stat__val mono">{{ totalDistance | number:'1.0-0' }} km</span>
+          <span class="mini-stat__lbl">Distance parcourue</span>
+        </div>
+        <div class="mini-stat">
+          <span class="mini-stat__val mono">{{ totalLitres | number:'1.0-1' }} L</span>
+          <span class="mini-stat__lbl">Carburant consommé</span>
+        </div>
+        <div class="mini-stat">
+          <span class="mini-stat__val mono">{{ totalCout | number:'1.0-0' }} TND</span>
+          <span class="mini-stat__lbl">Coût total carburant</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab" [class.active]="activeTab==='missions'"
+              (click)="activeTab='missions'">
+        Missions ({{ missions.length }})
+      </button>
+      <button class="tab" [class.active]="activeTab==='consommations'"
+              (click)="activeTab='consommations'">
+        Consommations ({{ consommations.length }})
+      </button>
+    </div>
+
+    <!-- Missions tab -->
+    <div class="card" *ngIf="activeTab==='missions'">
+      <div class="table-wrapper" style="border:none">
+        <table>
+          <thead>
+            <tr>
+              <th>Départ</th><th>Destination</th><th>Distance</th>
+              <th>Chauffeur</th><th>Date</th><th>Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let m of missions">
+              <td>{{ m.pointDepart }}</td>
+              <td>{{ m.destination }}</td>
+              <td class="mono">{{ m.distance | number:'1.0-1' }} km</td>
+              <td>{{ m.chauffeurNom }}</td>
+              <td class="mono">{{ m.dateMission | date:'dd/MM/yyyy' }}</td>
+              <td><app-status-badge [status]="m.statut!"></app-status-badge></td>
+            </tr>
+            <tr *ngIf="missions.length===0">
+              <td colspan="6"><div class="empty-state"><p>Aucune mission</p></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Consommations tab -->
+    <div class="card" *ngIf="activeTab==='consommations'">
+      <div class="table-wrapper" style="border:none">
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Quantité (L)</th><th>Coût (TND)</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of consommations">
+              <td class="mono">{{ c.date | date:'dd/MM/yyyy' }}</td>
+              <td class="mono">{{ c.quantiteCarburant | number:'1.0-1' }}</td>
+              <td class="mono">{{ c.coutTotal | number:'1.0-2' }}</td>
+            </tr>
+            <tr *ngIf="consommations.length===0">
+              <td colspan="3"><div class="empty-state"><p>Aucune consommation</p></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </ng-container>
+</div>

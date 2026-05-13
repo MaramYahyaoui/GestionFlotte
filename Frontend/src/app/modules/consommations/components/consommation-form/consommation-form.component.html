@@ -1,0 +1,45 @@
+<div class="fade-in">
+  <div class="page-header">
+    <div class="page-title">
+      <h1>{{ isEdit ? 'Modifier la consommation' : 'Enregistrer un plein' }}</h1>
+    </div>
+    <button class="btn btn--secondary" (click)="cancel()">Annuler</button>
+  </div>
+  <app-loading-spinner *ngIf="loading"></app-loading-spinner>
+  <div class="card" style="max-width:520px" *ngIf="!loading">
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="form-group">
+        <label class="form-label">Véhicule *</label>
+        <select class="form-control" formControlName="vehiculeId">
+          <option [ngValue]="null">Sélectionner un véhicule</option>
+          <option *ngFor="let v of vehicules" [ngValue]="v.id">
+            {{ v.immatriculation }} — {{ v.modele }}
+          </option>
+        </select>
+        <span class="form-error" *ngIf="f['vehiculeId'].touched && f['vehiculeId'].errors?.['required']">Champ obligatoire</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date *</label>
+        <input class="form-control" type="date" formControlName="date" style="font-family:var(--font-mono)">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Quantité de carburant (litres) *</label>
+        <input class="form-control" type="number" step="0.1" formControlName="quantiteCarburant"
+               placeholder="50.0" style="font-family:var(--font-mono)">
+        <span class="form-error" *ngIf="f['quantiteCarburant'].touched && f['quantiteCarburant'].errors?.['required']">Champ obligatoire</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Coût total (TND) *</label>
+        <input class="form-control" type="number" step="0.01" formControlName="coutTotal"
+               placeholder="95.00" style="font-family:var(--font-mono)">
+        <span class="form-error" *ngIf="f['coutTotal'].touched && f['coutTotal'].errors?.['required']">Champ obligatoire</span>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn--secondary" (click)="cancel()">Annuler</button>
+        <button type="submit" class="btn btn--primary" [disabled]="saving">
+          {{ saving ? 'Enregistrement…' : (isEdit ? 'Mettre à jour' : 'Enregistrer') }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

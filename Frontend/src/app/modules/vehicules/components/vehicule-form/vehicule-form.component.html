@@ -1,0 +1,74 @@
+<div class="fade-in">
+  <div class="page-header">
+    <div class="page-title">
+      <h1>{{ isEdit ? 'Modifier le véhicule' : 'Nouveau véhicule' }}</h1>
+      <p>{{ isEdit ? 'Mettre à jour les informations' : 'Ajouter un véhicule à la flotte' }}</p>
+    </div>
+    <button class="btn btn--secondary" (click)="cancel()">Annuler</button>
+  </div>
+
+  <app-loading-spinner *ngIf="loading"></app-loading-spinner>
+
+  <div class="card form-card" *ngIf="!loading">
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="form-grid">
+
+        <div class="form-group">
+          <label class="form-label">Immatriculation *</label>
+          <input class="form-control" formControlName="immatriculation"
+                 placeholder="ex: TUN-001-AA" style="font-family: var(--font-mono)">
+          <span class="form-error" *ngIf="f['immatriculation'].touched && f['immatriculation'].errors?.['required']">
+            Champ obligatoire
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Modèle *</label>
+          <input class="form-control" formControlName="modele" placeholder="ex: Renault Kangoo">
+          <span class="form-error" *ngIf="f['modele'].touched && f['modele'].errors?.['required']">
+            Champ obligatoire
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Type *</label>
+          <select class="form-control" formControlName="type">
+            <option value="">Sélectionner un type</option>
+            <option *ngFor="let t of types" [value]="t">{{ t }}</option>
+          </select>
+          <span class="form-error" *ngIf="f['type'].touched && f['type'].errors?.['required']">
+            Champ obligatoire
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Kilométrage *</label>
+          <input class="form-control" type="number" formControlName="kilometrage"
+                 placeholder="0" style="font-family: var(--font-mono)">
+          <span class="form-error" *ngIf="f['kilometrage'].touched && f['kilometrage'].errors?.['min']">
+            Le kilométrage ne peut pas être négatif
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Statut *</label>
+          <select class="form-control" formControlName="statut">
+            <option value="DISPONIBLE">Disponible</option>
+            <option value="EN_MISSION">En mission</option>
+            <option value="EN_MAINTENANCE">En maintenance</option>
+            <option value="EN_PANNE">En panne</option>
+          </select>
+        </div>
+
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn--secondary" (click)="cancel()">Annuler</button>
+        <button type="submit" class="btn btn--primary" [disabled]="saving">
+          <svg *ngIf="saving" class="spinner-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+          {{ saving ? 'Enregistrement…' : (isEdit ? 'Mettre à jour' : 'Créer le véhicule') }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

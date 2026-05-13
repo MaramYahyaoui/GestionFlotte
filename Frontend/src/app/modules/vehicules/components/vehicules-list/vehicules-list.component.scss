@@ -1,0 +1,15 @@
+.immat-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.85rem;
+  &:hover { text-decoration: underline; }
+}
+
+.chip {
+  font-size: 0.75rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 8px;
+  color: var(--text-secondary);
+}

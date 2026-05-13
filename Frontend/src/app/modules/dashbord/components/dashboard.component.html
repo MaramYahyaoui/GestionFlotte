@@ -1,0 +1,102 @@
+<div class="fade-in">
+  <div class="page-header">
+    <div class="page-title">
+      <h1>Dashboard</h1>
+      <p>Vue d'ensemble de votre flotte</p>
+    </div>
+    <button class="btn btn--secondary btn--sm" (click)="load()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="23 4 23 10 17 10" />
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+      </svg>
+      Actualiser
+    </button>
+  </div>
+
+  <app-loading-spinner *ngIf="loading"></app-loading-spinner>
+
+  <ng-container *ngIf="loading === false">
+
+    <div *ngIf="data === null" style="padding:60px;text-align:center">
+      <p style="color:var(--text-secondary)">Impossible de charger les données.</p>
+      <button class="btn btn--primary" (click)="load()" style="margin-top:12px">Réessayer</button>
+    </div>
+
+    <ng-container *ngIf="data !== null">
+      <div class="stats-grid">
+        <app-stat-card label="Total véhicules"  [value]="data!.totalVehicules"         [icon]="icons.truck" color="blue"></app-stat-card>
+        <app-stat-card label="Disponibles"       [value]="data!.vehiculesDisponibles"   [icon]="icons.check" color="green"></app-stat-card>
+        <app-stat-card label="En mission"        [value]="data!.vehiculesEnMission"     [icon]="icons.route" color="blue"></app-stat-card>
+        <app-stat-card label="En maintenance"    [value]="data!.vehiculesEnMaintenance" [icon]="icons.alert" color="yellow"></app-stat-card>
+        <app-stat-card label="Chauffeurs"        [value]="data!.totalChauffeurs"        [icon]="icons.users" color="default"></app-stat-card>
+        <app-stat-card label="Missions en cours" [value]="data!.missionsEnCours"        [icon]="icons.route" color="blue"></app-stat-card>
+        <app-stat-card label="Coût carburant"    [value]="formatCurrency(data!.coutCarburantTotal)" [icon]="icons.fuel" color="yellow"></app-stat-card>
+        <app-stat-card label="Distance totale"   [value]="formatDistance(data!.distanceTotale)"     [icon]="icons.route" color="green"></app-stat-card>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="card">
+          <div class="card__header">
+            <span class="card__title">Top 5 véhicules actifs</span>
+            <a routerLink="/reporting" class="btn btn--secondary btn--sm">Voir tout</a>
+          </div>
+          <div class="table-wrapper" style="border:none">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th><th>Véhicule</th><th>Type</th><th>Missions</th><th>Distance</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let v of top5; let i = index">
+                  <td><span class="rank mono">#{{ i+1 }}</span></td>
+                  <td>
+                    <div class="vehicle-cell">
+                      <span class="immat mono">{{ v.immatriculation }}</span>
+                      <span class="modele">{{ v.modele }}</span>
+                    </div>
+                  </td>
+                  <td><span class="chip">{{ v.type }}</span></td>
+                  <td class="mono">{{ v.nombreMissions }}</td>
+                  <td class="mono">{{ formatDistance(v.distanceTotale) }}</td>
+                </tr>
+                <tr *ngIf="top5.length === 0">
+                  <td colspan="5" style="padding:30px;text-align:center;color:var(--text-muted)">Aucune donnée</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card__header">
+            <span class="card__title">Alertes maintenance</span>
+            <span class="badge badge--attention" *ngIf="data!.alertesMaintenance?.length">
+              {{ data!.alertesMaintenance.length }}
+            </span>
+          </div>
+          <div class="alertes-list">
+            <div *ngIf="data!.alertesMaintenance.length === 0" class="empty-state">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <p>Aucune alerte de maintenance</p>
+            </div>
+            <div *ngFor="let a of data!.alertesMaintenance" class="alerte-item">
+              <div class="alerte-item__info">
+                <span class="mono">{{ a.immatriculation }}</span>
+                <span class="alerte-item__model">{{ a.modele }}</span>
+              </div>
+              <div class="alerte-item__km">
+                <span class="mono">{{ a.kilometrageActuel | number }} km</span>
+                <span class="alerte-item__dep">+{{ a.depassement | number }} km</span>
+              </div>
+              <app-status-badge [status]="a.niveauAlerte"></app-status-badge>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+
+  </ng-container>
+</div>
