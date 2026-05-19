@@ -9,17 +9,13 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Mapper Vehicule ↔ VehiculeDTO
- * Structure identique au EtudiantConverter du cours (slides 22-24)
- */
+
 @Component
 public class VehiculeConverter {
 
     @Autowired
     private ModelMapper modelMapper;
 
-    // ===== toDto : de l'entité vers le DTO (slide 23) =====
     public VehiculeDTO toDto(Vehicule vehicule) {
         // Mapping automatique des attributs de même nom
         VehiculeDTO dto = modelMapper.map(vehicule, VehiculeDTO.class);
@@ -42,12 +38,10 @@ public class VehiculeConverter {
         return dto;
     }
 
-    // ===== fromDto : du DTO vers l'entité (slide 23) =====
     public Vehicule fromDto(VehiculeDTO dto) {
         return modelMapper.map(dto, Vehicule.class);
     }
 
-    // ===== conversion de liste (slide 24) =====
     public List<VehiculeDTO> toDtoList(List<Vehicule> vehicules) {
         return vehicules.stream()
                 .map(this::toDto)

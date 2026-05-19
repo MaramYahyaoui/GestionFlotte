@@ -11,12 +11,10 @@ import java.util.Optional;
 @Repository
 public interface VehiculeRepository extends JpaRepository<Vehicule, Long> {
 
-    // Méthodes dérivées (query by convention — slide 7-9 du cours)
     Optional<Vehicule> findByImmatriculation(String immatriculation);
     List<Vehicule> findByStatut(String statut);
     boolean existsByImmatriculation(String immatriculation);
 
-    // Requêtes JPQL (@Query — slide 10 du cours)
     @Query("SELECT v FROM Vehicule v WHERE v.statut IN ('DISPONIBLE', 'EN_MISSION')")
     List<Vehicule> findVehiculesActifs();
 
