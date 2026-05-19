@@ -17,7 +17,6 @@ public class ChauffeurConverter {
 
     public ChauffeurDTO toDto(Chauffeur chauffeur) {
         ChauffeurDTO dto = modelMapper.map(chauffeur, ChauffeurDTO.class);
-        // Attributs supplémentaires
         if (chauffeur.getTrajets() != null) {
             dto.setNombreMissions((long) chauffeur.getTrajets().size());
             dto.setDistanceTotale(

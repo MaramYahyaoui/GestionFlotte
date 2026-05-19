@@ -17,9 +17,7 @@ public class VehiculeConverter {
     private ModelMapper modelMapper;
 
     public VehiculeDTO toDto(Vehicule vehicule) {
-        // Mapping automatique des attributs de même nom
         VehiculeDTO dto = modelMapper.map(vehicule, VehiculeDTO.class);
-        // Mapping des attributs supplémentaires non présents dans l'entité
         if (vehicule.getTrajets() != null) {
             dto.setNombreMissions((long) vehicule.getTrajets().size());
             dto.setDistanceTotale(

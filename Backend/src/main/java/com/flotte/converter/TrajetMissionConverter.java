@@ -17,7 +17,6 @@ public class TrajetMissionConverter {
 
     public TrajetMissionDTO toDto(TrajetMission trajet) {
         TrajetMissionDTO dto = modelMapper.map(trajet, TrajetMissionDTO.class);
-        // Attributs supplémentaires issus des relations
         dto.setVehiculeId(trajet.getVehicule().getId());
         dto.setVehiculeImmatriculation(trajet.getVehicule().getImmatriculation());
         dto.setChauffeurId(trajet.getChauffeur().getId());

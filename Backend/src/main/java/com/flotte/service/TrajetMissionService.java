@@ -37,7 +37,6 @@ public class TrajetMissionService {
         return trajetConverter.toDtoList(trajetRepository.findAll());
     }
 
-    // Retourner une mission par id — Optional comme dans le cours
     public Optional<TrajetMissionDTO> findById(Long id) {
         return trajetRepository.findById(id).map(trajetConverter::toDto);
     }
@@ -83,7 +82,6 @@ public class TrajetMissionService {
         return trajetConverter.toDto(trajetRepository.save(mission));
     }
 
-    // Mettre à jour une mission — ifPresentOrElse
     public TrajetMissionDTO update(Long id, TrajetMissionDTO dto) {
         final TrajetMissionDTO[] result = {null};
         trajetRepository.findById(id).ifPresentOrElse(
@@ -100,7 +98,6 @@ public class TrajetMissionService {
         return result[0];
     }
 
-    // Terminer une mission — ifPresentOrElse
     public TrajetMissionDTO terminerMission(Long id) {
         final TrajetMissionDTO[] result = {null};
         trajetRepository.findById(id).ifPresentOrElse(
@@ -118,7 +115,6 @@ public class TrajetMissionService {
         return result[0];
     }
 
-    // Supprimer une mission — ifPresentOrElse
     public void delete(Long id) {
         trajetRepository.findById(id).ifPresentOrElse(
                 mission -> trajetRepository.deleteById(id),

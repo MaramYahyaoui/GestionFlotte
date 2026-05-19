@@ -17,7 +17,6 @@ public class ConsommationConverter {
 
     public ConsommationDTO toDto(Consommation consommation) {
         ConsommationDTO dto = modelMapper.map(consommation, ConsommationDTO.class);
-        // Attributs supplémentaires issus des relations
         dto.setVehiculeId(consommation.getVehicule().getId());
         dto.setVehiculeImmatriculation(consommation.getVehicule().getImmatriculation());
         return dto;

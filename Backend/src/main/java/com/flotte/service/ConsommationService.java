@@ -31,12 +31,10 @@ public class ConsommationService {
                 .collect(Collectors.toList());
     }
 
-    // Retourner une consommation par id — Optional comme dans le cours
     public Optional<ConsommationDTO> findById(Long id) {
         return consommationRepository.findById(id).map(this::toDTO);
     }
 
-    // Retourner les consommations d'un vehicule
     public List<ConsommationDTO> findByVehicule(Long vehiculeId) {
         return consommationRepository.findByVehiculeId(vehiculeId).stream()
                 .map(this::toDTO)
@@ -59,7 +57,6 @@ public class ConsommationService {
         return toDTO(consommationRepository.save(consommation));
     }
 
-    // Mettre à jour une consommation — ifPresentOrElse
     public ConsommationDTO update(Long id, ConsommationDTO dto) {
         final ConsommationDTO[] result = {null};
         consommationRepository.findById(id).ifPresentOrElse(
@@ -75,7 +72,6 @@ public class ConsommationService {
         return result[0];
     }
 
-    // Supprimer une consommation — ifPresentOrElse
     public void delete(Long id) {
         consommationRepository.findById(id).ifPresentOrElse(
                 consommation -> consommationRepository.deleteById(id),

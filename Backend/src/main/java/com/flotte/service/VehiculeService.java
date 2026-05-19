@@ -32,13 +32,11 @@ public class VehiculeService {
         return vehiculeConverter.toDtoList(vehiculeRepository.findAll());
     }
 
-    // Retourner un vehicule par id — utilisation de Optional comme dans le cours
     public Optional<VehiculeDTO> findById(Long id) {
         return vehiculeRepository.findById(id)
                 .map(vehiculeConverter::toDto);
     }
 
-    // Retourner les vehicules par statut
     public List<VehiculeDTO> findByStatut(String statut) {
         return vehiculeConverter.toDtoList(vehiculeRepository.findByStatut(statut));
     }
@@ -56,7 +54,6 @@ public class VehiculeService {
         return vehiculeConverter.toDto(vehiculeRepository.save(vehicule));
     }
 
-    // Mettre à jour un vehicule — ifPresentOrElse comme demandé
     public VehiculeDTO update(Long id, VehiculeDTO dto) {
         final VehiculeDTO[] result = {null};
         vehiculeRepository.findById(id).ifPresentOrElse(
